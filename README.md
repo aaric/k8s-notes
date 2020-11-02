@@ -857,11 +857,12 @@ sh> yum install -y nfs-utils
 sh> systemctl enable nfs-server --now
 sh> mkdir /nfs/pv-0{1,2} && chown -R 65534:65534 /nfs/pv-0{1,2}
 sh> tee /etc/exports <<-'EOF'
-/nfs/pv-01 192.168.160.*/24(rw,all_squash,anonuid=65534,anongid=65534)
-/nfs/pv-02 192.168.160.*/24(rw,all_squash,anonuid=65534,anongid=65534)
+/nfs/pv-01 192.168.160.0/24(rw,all_squash,anonuid=65534,anongid=65534)
+/nfs/pv-02 192.168.160.0/24(rw,all_squash,anonuid=65534,anongid=65534)
 EOF
 sh> exportfs -r
 sh> showmount -e 192.168.160.20
+sh> #mount -t nfs 192.168.160.20:/nfs/pv-01 /mnt/nfs
 ## yaml
 sh> tee pv-nfs-demo.yaml <<-'EOF'
 apiVersion: v1
@@ -937,6 +938,7 @@ EOF
 sh> kubectl create -f pvc-nfs-demo.yaml
 sh> kubectl get pvc
 sh> kubectl describe pvc nfs-pvc
+sh> kubectl exec myapp-pod -- ls /cache
 ```
 
 ### 2.5 Schedule
