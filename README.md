@@ -775,6 +775,28 @@ spec:
 EOF
 sh> kubectl apply -f secret-env-demo.yml
 sh> kubectl exec `kubectl get pod -l app=myapp -o=name | cut -d '/' -f2` -- env
+
+# docker-registry
+sh> kubectl create secret docker-registry harbor-secret --docker-server=s1:5000 \
+  --docker-username=admin --docker-password=admin \
+  --docker-email=harbor@incarcloud.com
+sh> kubectl get secret harbor-secret -o yaml
+sh> tee secret-harbor-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: s1:5000/dev/myapp:v1
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 80
+  imagePullSecrets:
+    - name: harbor-secret
+EOF
+sh> kubectl create -f secret-harbor-demo.yml
 ```
 
 #### 2.4.3 DownwardAPI
