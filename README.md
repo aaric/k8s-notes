@@ -668,7 +668,7 @@ spec:
 EOF
 sh> kubectl apply -f configmap-update-demo.yml
 sh> kubectl exec `kubectl get pod -l app=myapp -o=name | cut -d '/' -f2` \
-  /bin/sh -- cat /etc/config/log_level
+  -- cat /etc/config/log_level
 sh> kubectl edit configmap myapp-config-cm
 ```
 
@@ -678,11 +678,11 @@ sh> kubectl edit configmap myapp-config-cm
 # su - admin
 # serviceaccout
 sh> kubectl run myapp-pod --image wangyanglinux/myapp:v1
-sh> kubectl exec myapp-pod -- ls /run/secrets/kubernetes.io/serviceaccount
+sh> kubectl exec myapp-pod -- ls /var/run/secrets/kubernetes.io/serviceaccount
 
 # opaque
 sh> echo -n 'admin' | base64
-YWRtaW4=
+sh> echo -n 'YWRtaW4=' | base64 -d
 sh> tee secret-demo.yml <<-'EOF'
 apiVersion: v1
 kind: Secret
@@ -694,9 +694,19 @@ data:
   password: YWRtaW4=
 EOF
 sh> kubectl create -f secret-demo.yml
+sh> kubectl get secrets mysecret -o yaml
 
 # volume
 sh> tee secret-volume-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: YWRtaW4=
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -708,7 +718,7 @@ spec:
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: secret-volume
-          mountPath: ''
+          mountPath: "/secret"
           readOnly: true
   volumes:
     - name: secret-volume
@@ -716,9 +726,21 @@ spec:
         secretName: mysecret
 EOF
 sh> kubectl create -f secret-volume-demo.yml
+sh> kubectl exec myapp-pod -- ls /secret
+sh> kubectl exec myapp-pod -- cat /secret/username
+sh> kubectl exec myapp-pod -- cat /secret/password
 
 # env
 sh> tee secret-env-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: YWRtaW4=
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -752,7 +774,29 @@ spec:
                   key: password
 EOF
 sh> kubectl apply -f secret-env-demo.yml
-sh> kubectl exec myapp-deploy-7cbc587967-hsxb6 -- env
+sh> kubectl exec `kubectl get pod -l app=myapp -o=name | cut -d '/' -f2` -- env
+
+# docker-registry
+sh> kubectl create secret docker-registry harbor-secret --docker-server=s1:5000 \
+  --docker-username=admin --docker-password=admin \
+  --docker-email=harbor@incarcloud.com
+sh> kubectl get secret harbor-secret -o yaml
+sh> tee secret-harbor-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: s1:5000/dev/myapp:v1
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 80
+  imagePullSecrets:
+    - name: harbor-secret
+EOF
+sh> kubectl create -f secret-harbor-demo.yml
 ```
 
 #### 2.4.3 DownwardAPI
