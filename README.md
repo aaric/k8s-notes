@@ -850,6 +850,93 @@ spec:
 EOF
 sh> kubectl create -f volume-hostpath-demo.yaml
 sh> kubectl exec myapp-pod -- ls /cache
+
+# pv
+## support
+sh> yum install -y nfs-utils
+sh> systemctl enable nfs-server --now
+sh> mkdir /nfs/pv-0{1,2} && chown -R 65534:65534 /nfs/pv-0{1,2}
+sh> tee /etc/exports <<-'EOF'
+/nfs/pv-01 192.168.160.*/24(rw,all_squash,anonuid=65534,anongid=65534)
+/nfs/pv-02 192.168.160.*/24(rw,all_squash,anonuid=65534,anongid=65534)
+EOF
+sh> exportfs -r
+sh> showmount -e 192.168.160.20
+## yaml
+sh> tee pv-nfs-demo.yaml <<-'EOF'
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-01
+spec:
+  capacity:
+    storage: 100Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs
+  nfs:
+    path: /nfs/pv-01
+    server: 192.168.160.20
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-02
+spec:
+  capacity:
+    storage: 200Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs
+  nfs:
+    path: /nfs/pv-02
+    server: 192.168.160.20
+EOF
+sh> kubectl create -f pv-nfs-demo.yaml
+sh> kubectl get pv
+sh> kubectl describe pv nfs-pv-01
+sh> kubectl describe pv nfs-pv-02
+
+# pvc
+sh> tee pvc-nfs-demo.yaml <<-'EOF'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs
+  resources:
+    requests:
+      storage: 150Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: nfs-volume
+          mountPath: /cache
+  volumes:
+    - name: nfs-volume
+      persistentVolumeClaim:
+        claimName: nfs-pvc
+EOF
+sh> kubectl create -f pvc-nfs-demo.yaml
+sh> kubectl get pvc
+sh> kubectl describe pvc nfs-pvc
 ```
 
 ### 2.5 Schedule
