@@ -534,12 +534,225 @@ sh> dig -t A externalname-svc.default.svc.cluster.local. @10.244.0.6
 
 #### 2.4.1 ConfigMap
 
-```yaml
+```bash
+# su - admin
+# --from-file
+sh> tee appconfig.properties <<-'EOF'
+app.name=Hello Project
+app.version=1.0.0
+EOF
+sh> kubectl create configmap app-config-1 --from-file=./appconfig.properties
+sh> kubectl get configmaps app-config-1 -o yaml
+sh> kubectl delete configmap app-config-1
+
+# --from-literal
+sh> kubectl create configmap app-config-2 --from-literal=app.name=app2 \
+  --from-literal=app.verson=2.0
+sh> kubectl get configmaps app-config-2 -o yaml
+sh> kubectl delete configmap app-config-2
+
+# env
+sh> tee configmap-demo.yml <<-'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-cm
+data:
+  app.name: Hello Project
+  app.version: 1.0.0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-env-cm
+data:
+  log_level: INFO
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "env"]
+      env:
+        - name: APP_NAME
+          valueFrom:
+            configMapKeyRef:
+               name: myapp-cm
+               key: app.name
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+               name: myapp-cm
+               key: app.version
+      envFrom:
+        - configMapRef:
+            name: myapp-env-cm
+  restartPolicy: Never
+EOF
+sh> kubectl create -f configmap-demo.yml
+sh> kubectl logs myapp-pod
+
+# volume
+sh> tee configmap-volume-demo.yml <<-'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-volume-cm
+data:
+  app.name: Hello Project
+  app.version: 1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "cat /etc/config/app.name"]
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+  volumes:
+    - name: config-volume
+      configMap:
+        name: myapp-volume-cm
+  restartPolicy: Never
+EOF
+sh> kubectl create -f configmap-volume-demo.yml
+sh> kubectl logs myapp-pod
+
+# update config
+sh> tee configmap-update-demo.yml <<-'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-config-cm
+data:
+  log_level: INFO
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: myapp-config-cm
+EOF
+sh> kubectl apply -f configmap-update-demo.yml
+sh> kubectl exec `kubectl get pod -l app=myapp -o=name | cut -d '/' -f2` \
+  /bin/sh -- cat /etc/config/log_level
+sh> kubectl edit configmap myapp-config-cm
 ```
 
 #### 2.4.2 Secret
 
-```yaml
+```bash
+# su - admin
+# serviceaccout
+sh> kubectl run myapp-pod --image wangyanglinux/myapp:v1
+sh> kubectl exec myapp-pod -- ls /run/secrets/kubernetes.io/serviceaccount
+
+# opaque
+sh> echo -n 'admin' | base64
+YWRtaW4=
+sh> tee secret-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: YWRtaW4=
+EOF
+sh> kubectl create -f secret-demo.yml
+
+# volume
+sh> tee secret-volume-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: secret-volume
+          mountPath: ''
+          readOnly: true
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: mysecret
+EOF
+sh> kubectl create -f secret-volume-demo.yml
+
+# env
+sh> tee secret-env-demo.yml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          env:
+            - name: TEST_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysecret
+                  key: username
+            - name: TEST_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: mysecret
+                  key: password
+EOF
+sh> kubectl apply -f secret-env-demo.yml
+sh> kubectl exec myapp-deploy-7cbc587967-hsxb6 -- env
 ```
 
 #### 2.4.3 DownwardAPI
