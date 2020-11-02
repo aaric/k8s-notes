@@ -799,9 +799,57 @@ EOF
 sh> kubectl create -f secret-harbor-demo.yml
 ```
 
-#### 2.4.3 DownwardAPI
+#### 2.4.3 Volume
 
-```yaml
+```bash
+# su - admin
+# emptydir
+sh> tee volume-emptydir-demo.yaml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: cache-volume
+          mountPath: /cache
+  volumes:
+    - name: cache-volume
+      emptyDir: {}
+EOF
+sh> kubectl create -f volume-emptydir-demo.yaml
+sh> kubectl exec myapp-pod -- ls /cache
+
+# hostpath
+sh> tee volume-hostpath-demo.yaml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: hostpath-volume
+          mountPath: /cache
+  volumes:
+    - name: hostpath-volume
+      hostPath:
+        path: /tmp/cache
+        type: Directory
+EOF
+sh> kubectl create -f volume-hostpath-demo.yaml
+sh> kubectl exec myapp-pod -- ls /cache
 ```
 
 ### 2.5 Schedule
