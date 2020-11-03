@@ -411,13 +411,61 @@ sh> kubectl get cj
 sh> kubectl logs print-cj-1603344900-f8m5q
 ```
 
-#### 2.2.6 StatefullSet
+#### 2.2.6 StatefulSet
 
 ```bash
 # su - admin
-sh> tee statefull-set-demo.yml <<-'EOF'
+sh> tee stateful-set-demo.yml <<-'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-headless-svc
+spec:
+  selector:
+    app: myapp
+  clusterIP: "None"
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: myapp-ss
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  serviceName: myapp-headless-svc
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: nginx:1.18.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html-volume
+              mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+    - metadata:
+        name: html-volume
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: nfs
+        resources:
+          requests:
+           storage: 100Mi
 EOF
-sh> kubectl create -f statefull-set-demo.yml
+sh> kubectl create -f stateful-set-demo.yml
+sh> kubectl get pod -o wide
 ```
 
 #### 2.2.7 HPA（HorizontalPodAutoScale）
