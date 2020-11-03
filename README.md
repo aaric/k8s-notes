@@ -1176,7 +1176,94 @@ sh> kubectl get pod -o wide
 
 ### 2.6 Security
 
-```yaml
+#### 2.6.1 Role
+
+```bash
+# su - admin
+sh> tee role-demo.yaml <<-'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-admin
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+EOF
+sh> kubectl create -f role-demo.yaml
+sh> kubectl describe role pod-admin
+```
+
+#### 2.6.2 ClusterRole
+
+```bash
+# su - admin
+sh> tee clusterrole-demo.yaml <<-'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: secret-admin
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+EOF
+sh> kubectl create -f clusterrole-demo.yaml
+sh> kubectl describe clusterrole secret-admin
+```
+
+#### 2.6.3 RoleBinding
+
+```bash
+# su - admin
+sh> tee rolebinding-demo.yaml <<-'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-admin-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pod-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: zhangsan
+EOF
+sh> kubectl create -f rolebinding-demo.yaml
+sh> kubectl describe rolebinding pod-admin-bind
+```
+
+#### 2.6.4 ClusterRoleBinding
+
+```bash
+# su - admin
+sh> tee clusterrolebinding-demo.yaml <<-'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: secret-admin-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: secret-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: admin
+EOF
+sh> kubectl create -f clusterrolebinding-demo.yaml
+sh> kubectl describe clusterrolebinding secret-admin-bind
 ```
 
 ### 2.7 Helm
