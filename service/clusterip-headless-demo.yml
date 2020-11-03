@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clusterip-svc
+spec:
+  selector:
+    app: myapp
+  #type: ClusterIP
+  clusterIP: "None"
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

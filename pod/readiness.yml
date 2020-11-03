@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: readiness-container
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      readinessProbe:
+        httpGet:
+          port: 80
+          path: /index1.html
+        initialDelaySeconds: 1
+        periodSeconds: 3

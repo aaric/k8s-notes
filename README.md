@@ -991,7 +991,187 @@ sh> kubectl exec myapp-pod -- ls /cache
 
 ### 2.5 Schedule
 
-```yaml
+### 2.5.1 Affinity
+
+> **Predicate过滤算法说明**  
+> `PodFitsResources` *节点上剩余的资源是否大于`pod`请求的资源*  
+> `PodFitsHost` *如果`pod`指定了`NodeName`，检查节点名称是否和`NodeName`匹配*  
+> `PodFitsHostPorts` *节点上已经使用的`port`是否和`pod`申请的`port`冲突*  
+> `PodSelectorMatches` *过滤掉和`pod`指定的`label`不匹配的节点*  
+> `NoDiskConflict` *已经`mount`的`volume`和`pod`指定的`volume`不冲突，除非它们都是只读*  
+>  
+> **Priority权重说明**  
+> `LeastRequestedPriority` *通过计算`CPU`和`Memory`的使用率来决定权重，使用率越低权重越高*  
+> `BalancedResourceAllocation` *节点上`CPU`和`Memory`使用率越接近，权重越高*  
+> `ImageLocalityPriority` *倾向于已经有要使用镜像的节点，镜像总大小值越大，权重越高*  
+>  
+> **Operator运算符说明**  
+> `In` *`label`的值在某个列表中*  
+> `NotIn` *`label`的值不在某个列表中*  
+> `Gt` *`label`的值大于某个值*  
+> `Lt` *`label`的值小于某个值*  
+> `Exists` *某个`label`存在*  
+> `DoesNotExist` *某个`label`不存在*
+
+```bash
+# su - admin
+# preferred
+sh> tee affinity-preferred-demo.yaml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: affinity-preferred-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: source
+                operator: In
+                values:
+                  - something
+EOF
+sh> kubectl create -f affinity-preferred-demo.yaml
+sh> kubectl describe pod affinity-preferred-pod
+
+# required
+sh> tee affinity-required-demo.yaml <<-'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: affinity-required-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: NotIn
+              values:
+                - gke-node01
+EOF
+sh> kubectl create -f affinity-required-demo.yaml
+sh> kubectl get pod -o wide
+```
+
+### 2.5.2 Taint And Tolerations
+
+```bash
+# su - admin
+# taint
+# NoSchedule | PreferNoSchedule | NoExecute
+sh> kubectl taint node gke-node02 key1=value1:NoSchedule
+sh> kubectl describe node gke-node02
+sh> kubectl taint node gke-node02 key1:NoSchedule-
+
+# tolerations
+sh> tee tolerations-demo.yaml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+      tolerations:
+        - key: key1
+          operator: Equal
+          value: value1
+          effect: NoSchedule
+          tolerationSeconds: 3600
+EOF
+sh> kubectl apply -f tolerations-demo.yaml
+sh> kubectl taint node gke-node02 key1=value1:NoExecute
+sh> kubectl taint node gke-node02 key1-
+```
+
+### 2.5.3 Node
+
+```bash
+# su - admin
+# nodename
+sh> tee nodename-demo.yaml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      nodeName: gke-node02
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+EOF
+sh> kubectl apply -f nodename-demo.yaml
+
+# nodeseletor
+sh> kubectl label node gke-node01 custom.type=backend
+sh> kubectl get node --show-labels
+sh> tee nodeseletor-demo.yaml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      nodeSelector:
+        custom.type: backend
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+EOF
+sh> kubectl apply -f nodeseletor-demo.yaml
+sh> kubectl get pod -o wide
 ```
 
 ### 2.6 Security

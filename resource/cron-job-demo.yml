@@ -1,0 +1,19 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: print-cj
+spec:
+  schedule: "0/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: print
+              image: busybox:1.28.4
+              imagePullPolicy: IfNotPresent
+              args:
+                - /bin/sh
+                - -c
+                - /bin/date; echo hello from cron job
+          restartPolicy: OnFailure
