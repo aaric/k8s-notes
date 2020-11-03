@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: readiness-container
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh","-c","date > /tmp/live; sleep 60; rm -rf /tmp/live"]
+      livenessProbe:
+        exec:
+         command: ["/usr/bin/test", "-e", "/tmp/live"]
+        initialDelaySeconds: 1
+        periodSeconds: 3

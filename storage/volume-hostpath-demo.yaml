@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: hostpath-volume
+          mountPath: /cache
+  volumes:
+    - name: hostpath-volume
+      hostPath:
+        path: /tmp/cache
+        type: Directory

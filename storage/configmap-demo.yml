@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-cm
+data:
+  app.name: Hello Project
+  app.version: 1.0.0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-env-cm
+data:
+  log_level: INFO
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: myapp
+      image: wangyanglinux/myapp:v1
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "env"]
+      env:
+        - name: APP_NAME
+          valueFrom:
+            configMapKeyRef:
+               name: myapp-cm
+               key: app.name
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+               name: myapp-cm
+               key: app.version
+      envFrom:
+        - configMapRef:
+            name: myapp-env-cm
+  restartPolicy: Never

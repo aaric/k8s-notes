@@ -991,6 +991,8 @@ sh> kubectl exec myapp-pod -- ls /cache
 
 ### 2.5 Schedule
 
+### 2.5.1 Affinity
+
 > **Predicate过滤算法说明**  
 > `PodFitsResources` *节点上剩余的资源是否大于`pod`请求的资源*  
 > `PodFitsHost` *如果`pod`指定了`NodeName`，检查节点名称是否和`NodeName`匹配*  
@@ -1013,8 +1015,7 @@ sh> kubectl exec myapp-pod -- ls /cache
 
 ```bash
 # su - admin
-# affinity
-## preferred
+# preferred
 sh> tee affinity-preferred-demo.yaml <<-'EOF'
 apiVersion: v1
 kind: Pod
@@ -1041,7 +1042,7 @@ EOF
 sh> kubectl create -f affinity-preferred-demo.yaml
 sh> kubectl describe pod affinity-preferred-pod
 
-## required
+# required
 sh> tee affinity-required-demo.yaml <<-'EOF'
 apiVersion: v1
 kind: Pod
@@ -1066,7 +1067,12 @@ spec:
 EOF
 sh> kubectl create -f affinity-required-demo.yaml
 sh> kubectl get pod -o wide
+```
 
+### 2.5.2 Taint And Tolerations
+
+```bash
+# su - admin
 # taint
 # NoSchedule | PreferNoSchedule | NoExecute
 sh> kubectl taint node gke-node02 key1=value1:NoSchedule
@@ -1100,10 +1106,72 @@ spec:
           operator: Equal
           value: value1
           effect: NoSchedule
+          tolerationSeconds: 3600
 EOF
-sh> kubectl create -f tolerations-demo.yaml
+sh> kubectl apply -f tolerations-demo.yaml
 sh> kubectl taint node gke-node02 key1=value1:NoExecute
 sh> kubectl taint node gke-node02 key1-
+```
+
+### 2.5.3 Node
+
+```bash
+# su - admin
+# nodename
+sh> tee nodename-demo.yaml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      nodeName: gke-node02
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+EOF
+sh> kubectl apply -f nodename-demo.yaml
+
+# nodeseletor
+sh> kubectl label node gke-node01 custom.type=backend
+sh> kubectl get node --show-labels
+sh> tee nodeseletor-demo.yaml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      nodeSelector:
+        custom.type: backend
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+EOF
+sh> kubectl apply -f nodeseletor-demo.yaml
+sh> kubectl get pod -o wide
 ```
 
 ### 2.6 Security
