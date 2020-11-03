@@ -1066,6 +1066,44 @@ spec:
 EOF
 sh> kubectl create -f affinity-required-demo.yaml
 sh> kubectl get pod -o wide
+
+# taint
+# NoSchedule | PreferNoSchedule | NoExecute
+sh> kubectl taint node gke-node02 key1=value1:NoSchedule
+sh> kubectl describe node gke-node02
+sh> kubectl taint node gke-node02 key1:NoSchedule-
+
+# tolerations
+sh> tee tolerations-demo.yaml <<-'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: wangyanglinux/myapp:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+      tolerations:
+        - key: key1
+          operator: Equal
+          value: value1
+          effect: NoSchedule
+EOF
+sh> kubectl create -f tolerations-demo.yaml
+sh> kubectl taint node gke-node02 key1=value1:NoExecute
+sh> kubectl taint node gke-node02 key1-
 ```
 
 ### 2.6 Security
