@@ -1268,7 +1268,7 @@ sh> kubectl describe clusterrolebinding secret-admin-bind
 
 ### 2.7 Helm
 
-> [Helm Version Support Policy](https://helm.sh/docs/topics/version_skew/) - ****
+> [Helm Version Support Policy](https://helm.sh/docs/topics/version_skew/)
 
 |No.|Helm Version|Kubernetes Versions|Remark|
 |:-:|:----------:|:-----------------:|------|
