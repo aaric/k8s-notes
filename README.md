@@ -1268,5 +1268,28 @@ sh> kubectl describe clusterrolebinding secret-admin-bind
 
 ### 2.7 Helm
 
-```yaml
+> [Helm Version Support Policy](https://helm.sh/docs/topics/version_skew/) - ****
+
+|No.|Helm Version|Kubernetes Versions|Remark|
+|:-:|:----------:|:-----------------:|------|
+|1|`3.4.x`|`1.19.x` - `1.16.x`|*`v3` Not Require `Tiller`*|
+|2|`3.2.x`|`1.18.x` - `1.15.x`|*Also `3.3.x`*|
+|3|`2.16.x`|`1.16.x` - `1.15.x`||
+
+```bash
+# su - root
+sh> tar -zxvf helm-v3.4.0-linux-amd64.tar.gz
+sh> cp linux-amd64/helm /usr/local/bin/
+sh> helm version
+sh> helm env
+sh> helm repo add stable http://mirror.azure.cn/kubernetes/charts/
+sh> helm repo list
+sh> helm search repo nginx
+sh> #helm plugin install https://github.com/aslafy-z/helm-git --version 0.8.1
+sh> helm plugin ls
+```
+
+### 2.8 Istio
+
+```bash
 ```
